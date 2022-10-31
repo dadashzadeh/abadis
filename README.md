@@ -2,14 +2,14 @@
 دریافت اطلاعات از سایت آبادیس
 
 
-print(abadis().equivalent_text('تست'))<br />
+print(Abadis().get_equivalent_persian_text('تست'))<br />
 آزمایش|آزمون
 
-print(abadis().equivalent_list(['تست', 'آزمایش']))<br />
+print(Abadis().get_equivalent_persian_list(['تست', 'آزمایش']))<br />
 ['آزمایش|آزمون', 'None']
 
-print(abadis().general_encyclopedia("تست"))<br />
+print(Abadis().get_general_encyclopedia("تست"))<br />
 ['تست', 'تست (فیلم ۱۹۳۵)', 'تست (فیلم ۲۰۱۳)', 'تست (فیلم کوتاه)', 'تست (فیلم)']
 
-print(abadis().comment("تست"))<br />
+print(Abadis().get_the_most_liked_comment("تست"))<br />
 Test: سنجشTesting: سنجیدن
