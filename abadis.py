@@ -19,69 +19,91 @@ class Abadis:
 
     def get_data_html(self, text: str) -> str:
         urlabadis = f"https://abadis.ir/fatofa/{text}"
-        page = r.get((urlabadis), headers=headers)
+        page = r.get((urlabadis), headers=headers, timeout=10)
         soup = BeautifulSoup(page.content, 'lxml')
         return soup
 
-    def get_equivalent_persian_text(self, text: str) -> str:
-        soup = Abadis().get_data_html(text)
-        
-        if soup.find("div", {"class": "boxMain"}):
-            html_content = soup.find("div", {"class": "boxMain"})
-            try:
-                equivalent = html_content.find(
-                    "b", string={"برابر پارسی"}).next_sibling.strip(": ")
-                equivalent_replace = equivalent.replace("، ", "|")
-                equivalent_text = equivalent_replace.replace(" ", "")
-            except:
-                return None
-        else:
-            return None
-
-        return equivalent_text
-
-    def get_general_encyclopedia(self, text: str) -> str:
+    def get_data_all_text_abadis(self, text: str) -> dict:
+        ''' get data Persian equivalent , equivalent , Opposite , encyclopedia '''
+        all_comment = []
         list_encyclopedia = []
-        
+
         soup = Abadis().get_data_html(text)
-        if soup.find("div", {"t": "دانشنامه عمومی"}):
-            html_content = soup.find("div", {"t": "دانشنامه عمومی"})
-            for list_text in html_content.find_all("div", {"class": "wikilink"}):
-                text_encyclopedia = list_text.find("a").text
-                list_encyclopedia.append(text_encyclopedia)
+
+        if soup.find("div", attrs={"class": "boxMain"}):
+            html_boxMain = soup.find("div", attrs={"class": "boxMain"})
+
+            # get equivalent
+            try:
+                equivalent = html_boxMain.find(
+                    "b", string={f"مترادف {text}"}).next_sibling.strip(": ")
+                equivalent = equivalent.replace(" ", "").split("،")
+                equivalent = [re.sub(r'\W', '', remove)
+                              for remove in equivalent]
+
+            except:
+                equivalent = None
+
+            # get Opposite
+            try:
+                Opposite = html_boxMain.find(
+                    "b", string={f"متضاد {text}"}).next_sibling.strip(": ").split("، ")
+                Opposite = [re.sub(r'\W', '', remove) for remove in Opposite]
+            except:
+                Opposite = None
+
+            # get Persian equivalen
+            try:
+                Persian_equivalent = html_boxMain.find(
+                    "b", string={"برابر پارسی"}).next_sibling.strip(": ").split("، ")
+                Persian_equivalent = [re.sub(r'\W', '', remove)
+                                      for remove in Persian_equivalent]
+            except:
+                Persian_equivalent = None
+
+            # get name encyclopedia
+            if soup.find("div", {"t": "دانشنامه عمومی"}):
+                html_encyclopedia = soup.find("div", {"t": "دانشنامه عمومی"})
+                for list_text in html_encyclopedia.find_all("div", {"class": "wikilink"}):
+                    text_encyclopedia = list_text.find("a").text
+                    list_encyclopedia.append(text_encyclopedia)
+            else:
+                list_encyclopedia.append(None)
+
+            # get the most liked comment
+            try:
+                html_comment = soup.find("div", {"id": "cmts"})
+                # Find the number of likes
+                number_list = re.findall(r"[l]..\d+", str(html_comment))
+                replace = [list.replace('l=\"', '').strip()
+                           for list in number_list]
+
+                # The most number of likes
+                maxnumber = max(replace, key=lambda value: int(value))
+                get_the_most_liked_comment = html_comment.find(
+                    "div", {"l": maxnumber}).text
+            except:
+                get_the_most_liked_comment = None
+
+            # comments
+            if soup.find_all("div", {"class": "cmt"}):
+                html_comments = soup.find_all("div", {"class": "cmt"})
+                try:
+                    for all in html_comments:
+                        all = all.text
+                        all_comment.append(all)
+                except:
+                    pass
+            else:
+                all_comment.append(None)
+
         else:
             return None
 
-        return list_encyclopedia
-
-    def get_the_most_liked_comment(self, text: str) -> str:
-        soup = Abadis().get_data_html(text)
-        html_content = soup.find("div", {"id": "cmts"})
-
-        # Find the number of likes
-        number_list = re.findall(r"[l]..\d+", str(html_content))
-        replace = [list.replace('l=\"', '').strip() for list in number_list]
-        
-        # The most number of likes
-        maxnumber = max(replace, key=lambda value: int(value))
-        return html_content.find("div", {"l": maxnumber}).text
-
-    def get_equivalent_persian_list(self, list_text: list) -> list:
-        equivalent_persian_list = []
-
-        for list_texts in list_text:
-            soup = Abadis().get_data_html(list_texts)
-            if soup.find("div", {"class": "boxMain"}):
-                html_content = soup.find("div", {"class": "boxMain"})
-                try:
-                    equivalent_list = html_content.find(
-                        "b", string={"برابر پارسی"}).next_sibling.strip(": ")
-                    equivalent_replace = equivalent_list.replace("، ", "|")
-                    equivalent_replace = equivalent_replace.replace(" ", "")
-                    equivalent_persian_list.append(equivalent_replace)
-                except:
-                    equivalent_persian_list.append("None")
-            else:
-                equivalent_persian_list.append("None")
-
-        return equivalent_persian_list
+        return {"مترادف": equivalent,
+                "متضاد": Opposite,
+                "برابر": Persian_equivalent,
+                "دانشنامه عمومی": list_encyclopedia,
+                "بیشترین کامند لایک شده": get_the_most_liked_comment,
+                "کامنت": all_comment
+                }
