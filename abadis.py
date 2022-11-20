@@ -19,18 +19,19 @@ class Abadis:
 
     def get_data_html(self, text: str) -> str:
         urlabadis = f"https://abadis.ir/fatofa/{text}"
-        page = r.get((urlabadis), headers=headers, timeout=10)
+        page = r.get((urlabadis), headers=headers, timeout=30)
         soup = BeautifulSoup(page.content, 'lxml')
         return soup
 
     def get_data_all_text_abadis(self, text: str) -> dict:
         ''' get data Persian equivalent , equivalent , Opposite , encyclopedia '''
+        word_tables = []
         all_comment = []
         list_encyclopedia = []
 
         soup = Abadis().get_data_html(text)
 
-        if soup.find("div", attrs={"class": "boxMain"}):
+        try:
             html_boxMain = soup.find("div", attrs={"class": "boxMain"})
 
             # get equivalent
@@ -60,6 +61,14 @@ class Abadis:
                                       for remove in Persian_equivalent]
             except:
                 Persian_equivalent = None
+
+            # get name word table
+            if soup.find("div", {"t": "جدول کلمات"}):
+                word_table = soup.find("div", {"t": "جدول کلمات"})
+                for list_text in word_table.find_all("div", {"class": "boxBd"}):
+                    word_table = list_text.text
+            else:
+                word_table = None
 
             # get name encyclopedia
             if soup.find("div", {"t": "دانشنامه عمومی"}):
@@ -97,12 +106,13 @@ class Abadis:
             else:
                 all_comment.append(None)
 
-        else:
-            return None
+        except:
+            return "not found word"
 
         return {"مترادف": equivalent,
                 "متضاد": Opposite,
                 "برابر": Persian_equivalent,
+                "جدول کلمات": word_table,
                 "دانشنامه عمومی": list_encyclopedia,
                 "بیشترین کامند لایک شده": get_the_most_liked_comment,
                 "کامنت": all_comment
